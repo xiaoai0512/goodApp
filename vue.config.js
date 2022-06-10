@@ -1,14 +1,15 @@
 // 配置文件
 const path = require('path');
-function resolve (dir) {
+
+function resolve(dir) {
   return path.join(__dirname, dir);
 }
+
 module.exports = {
   //打包后的位置(如果不设置这个静态资源会报404)
   publicPath: './',
-
   //打包后的目录名称
-  outputDir: 'dist',
+  outputDir: 'distapp',
 
   //静态资源目录名称
   assetsDir: 'static',
@@ -19,25 +20,26 @@ module.exports = {
   lintOnSave: true,
   filenameHashing: false,
   // webpack 配置
-  chainWebpack: (config)=> {
+  chainWebpack: (config) => {
     config.resolve.alias
       .set('@', resolve('src'))
       .set('common', resolve('src/common'))
   },
   devServer: {
     // 后端请求转发，此配置仅开发环境有效，生产环境请参考生产环境部署文档配置nginx转发
-		proxy: {
-			'/goodsmanager': {
-				target: 'http://101.201.76.165:28080/goodsmanager',
-                changeOrigin: true,
-                pathRewrite: {
-                    '^/goodsmanager': ''
-                }
-				// target: 'http://8.131.70.94:8088/'
-			}
-		},
-		port:80,
-		inline:false //实时编译
+    // proxy: {
+    //   '/goodsmanager': {
+    //     target: 'http://127.0.0.1:28080/goodsmanager',
+    //     changeOrigin: true,
+    //     pathRewrite: {
+    //       '^/goodsmanager': ''
+    //     }
+    //     // target: 'http://8.131.70.94:8088/'
+    //   }
+    // },
+    port: 8055,
+    inline: false, //实时编译
+    disableHostCheck: true,
 
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <!-- 物品申请-添加 -->
+  <!-- 新员工入职物资 -->
   <div>
     <van-nav-bar
       left-text="返回"
@@ -20,17 +20,17 @@
       </div>
       <div class="item" style="margin-top: 5px" @click="dateTime">
         <div class="item-order">
-          采购时间
+          领用日期
         </div>
         <div class="order-text">
           <span>{{buytime}}</span>
           <span class="icon-arrow"></span>
         </div>
       </div>
-      <!-- 负责人 -->
+      <!-- 领用人 -->
       <div class="goods-content">
-        <div class="title">负责人</div>
-        <div class="ava">
+        <div class="title">领用人</div>
+        <div class="ava" @click="personInforBtn">
           <div class="ava-items">
             <img :src="avatarUrl">
           </div>
@@ -39,47 +39,34 @@
           </div>
         </div>
       </div>
+      <div class="item" style="margin-top: 5px">
+        <van-field class="title" v-model="remarks" label="申请说明" :required="true" />
+      </div>
       <!-- 采购明细添加 -->
       <div class="item" style="margin-top: 5px">
         <div class="item-order">
-          采购明细
+          领用明细
         </div>
-        <div class="order-text">
+        <!-- <div class="order-text">
           <span class="add" @click="addBtn">+添加</span>
-        </div>
+        </div> -->
       </div>
-      <!-- 采购明细列表 -->
-      <div class="table" v-if="list&&list.length !==0">
+      <!-- 入职默认物资明细列表 -->
+      <div class="table" :data="list">
         <div class="header">
-          <div class="name" style="flex: 2">序号</div>
-          <div class="name">产品名称</div>
-          <!-- <div class="name">产品规格</div> -->
-          <div class="name">单价</div>
-          <div class="name" style="flex: 7">数量</div>
+          <div class="name">序号</div>
+          <div class="name">产品</div>
+          <div class="name">规格</div>
+          <div class="name">数量</div>
         </div>
         <div class="list" v-for="(item, index) in list" :key="index">
-          <div class="mumber" style="flex: 2">{{index + 1}}</div>
+          <div class="mumber">{{index + 1}}</div>
           <div class="name">{{item.goodsName}}</div>
-          <div class="name">{{item.goodsPrice}}</div>
-          <div class="specifications" style="flex: 7">
-            <van-stepper v-model.number="item.goodsNum" min="0" button-size="19px"
-              async-change
-              @change="countChange"
-            />
-          </div>
+          <div class="specifications">{{item.goodsUnit  | filterType }}</div>
+          <div class="specifications">{{item.goodsNum}}</div>
         </div>
       </div>
 
-      <!-- 采购金额 -->
-      <div class="item" style="margin-top: 5px">
-        <div class="item-order">
-          采购金额
-        </div>
-        <div class="order-text">
-          {{countAmount}}
-        </div>
-      </div>
-      <div style="height: 60px">&nbsp;</div>
       <!-- footer-提交 -->
       <div class="footer" @click="submit">
         提交
@@ -101,14 +88,12 @@
       </van-popup>
 
     </div>
-
     <!-- 遮罩层 -->
     <van-overlay :show="showLay" @click="show=false" z-index="10000">
       <div class="wrapper" @click.stop>
         <van-loading type="spinner" color="#1989fa" />
       </div>
     </van-overlay>
-
   </div>
 
 </template>
@@ -129,28 +114,19 @@ export default {
       tday : 0,
       tday_str: '',
       flowType: this.$route.query.flowType,
-      countAmount: 0,
       avatarUrl: '',
       userName: '',
       title: this.$route.query.title,
       showLay: false,
-      timer: null,
-
+      remarks: '',
     }
   },
   created () {
-    let dictJson = JSON.parse(window.sessionStorage.getItem('DICT-FlowType'))
-    let ds = '';
-    dictJson.forEach(dto => {
-      if(this.flowType == dto.dictValue) {
-        ds = dto.dictName
-        return
-      }
-    })
-    this.title = ds
-    this.buytime = this.$route.query.buytime
-    this.getList()
     this.getCurDate()
+  },
+  mounted(){
+    this.getList()
+    this.getApprovedBy()
   },
   filters: {
     filterType(val) {
@@ -163,9 +139,6 @@ export default {
         }
       })
       return ds;
-    },
-    filtersNumber(val) {
-      //console.log(val)
     }
   },
   methods: {
@@ -185,80 +158,43 @@ export default {
       }
       this.buytime = this.currentDate.getFullYear()+ '-' + this.tmonth_str+'-' +this.tday_str
     },
+    // 入职默认物资查询
     getList () {
-      // 遍历数据添加一个属性用于添加数量
-      let itemJson = JSON.parse(window.sessionStorage.getItem('SELECT-ITEM'))
-      this.list = []
-      let listItems = this.$route.query.checkList
-      if(typeof listItems === 'string') {
-        let allItems = [];
-        let listNew = listItems = JSON.parse(listItems)
-        if(listNew && listNew.length >0) {
-          // 判断一下，已添加的
-          if(itemJson && itemJson.length > 0){
-            let itemOld = [];
-            itemJson.map(item=>{
-              let has = false;
-              listNew.map(req=> {
-                if(item.id == req.id){
-                  has = true;
-                }
-              });
-              if(!has){
-                itemOld.push(item);
-              }
-            });
-            if(itemOld && itemOld.length >0){
-              itemOld.map(req=> {
-                allItems.push(req);
-              });
-            }
-          }
-          listNew.map(req=> {
-            allItems.push(req);
-          })
-          allItems.map(req=> {
-            if(!req.goodsNum)
-              req.goodsNum = 1
-            this.countAmount =  this.countAmount + req.goodsPrice * req.goodsNum
-          })
-        }
-        this.list = allItems || []
-        window.sessionStorage.setItem('SELECT-ITEM', JSON.stringify(this.list));
-      }
-      this.getApprovedBy()
-    },
-    // 获取默认审批人
-    getApprovedBy() {
       let params = {
-        deptCode: window.sessionStorage.getItem('USER-DEPT'),
-        flowType: this.flowType
+          "deptCode": window.sessionStorage.getItem('USER-DEPT'),
+          "listType": this.flowType,
+          "page": 0,
+          "size": 0
       }
-      // console.log(params)
-      this.$http('/api/nextExaminer', params).then(res => {
-        this.avatarUrl = res.avatarUrl
-        this.userName = res.userName
+      this.$http('/api/gooDefListList', params).then( res => {
+        if (res.rows.length > 0) {
+          res.rows.forEach( (rowItem) => {
+            rowItem.goodsNum = 1
+          })
+          this.list = res.rows
+        }
       })
     },
     // 添加
-    addBtn() {
-      this.$router.push({path:'/select-Items', query: { flowType: this.flowType , buytime: this.buytime} })
-    },
-    // 加减
-    countChange() {
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => {
-        // 注意此时修改value后会再次触发change事件
-        let totalAmount = 0
-        this.list.map((req, index) => {
-          totalAmount = (parseInt(totalAmount * 100) + parseInt(req.goodsPrice * 100 * req.goodsNum )) / 100
-          if(req.goodsNum === 0) {
-            this.list.splice(index, 1)
-          }
+    // addBtn() {
+    //   this.$router.push({path:'/select-Items' });
+    // },
+    // 获取默认审批人
+    getApprovedBy() {
+      let userJson = JSON.parse(window.sessionStorage.getItem('USER-INFO'))
+      if(userJson == null ) {
+        let params = {
+          // deptCode: window.sessionStorage.getItem('USER-DEPT'),
+          // flowType: this.flowType
+        }
+        this.$http('/api/userInfo', params).then(res => {
+          this.avatarUrl = res.avatarUrl
+          this.userName = res.userName
         })
-        window.sessionStorage.setItem('SELECT-ITEM', JSON.stringify(this.list));
-        this.countAmount = totalAmount
-      },0);
+      }else{
+        this.avatarUrl = userJson.avatarUrl
+        this.userName = userJson.userName
+      }
     },
     // 提交
     submit() {
@@ -274,10 +210,17 @@ export default {
         })
         return ;
       }
+      if( typeof (this.remarks) == 'undefined' || this.remarks == ''){
+        Toast.fail({
+          message: "申请说明不能为空"
+        })
+        return ;
+      }
       let params = {
           "applyUseDate": this.buytime,
           "flowType": this.flowType,
-          "goods": this.list
+          "goods": this.list,
+          "remarks": this.remarks
       }
       let str = '';
       let dcd = '';
@@ -299,10 +242,22 @@ export default {
           })
           this.$router.push({path:'/index' })
         }
-        this.showLay=false
-      }, rej => {
-        this.showLay=false
+        this.showLay = false
+      }, rej =>{
+        this.showLay = false
       })
+
+    },
+    // 个人信息
+    personInforBtn() {
+      let params = {
+        // "deptCode": window.sessionStorage.getItem('USER-DEPT'),
+        // "flowType": this.flowType
+      }
+      this.$http('/api/userInfo', params).then( res => {
+
+      })
+
     },
     dateTime() {
       this.show = true
@@ -320,7 +275,6 @@ export default {
       }else {
         this.tday_str = this.tday;
       }
-
       this.buytime = this.currentDate.getFullYear()+ '-' + this.tmonth_str+'-' +this.tday_str
       this.show = false
 
@@ -346,15 +300,18 @@ export default {
     // 首页
     onClickRight() {
       this.$router.push({path:'/index' })
-    }
-  },
-  destroyed() {
-    this.timer && clearTimeout(this.timer)
+    },
+
   }
 }
 </script>
 <style lang="stylus" scoped>
 @import "~common/styl/variable.styl"
+  .van-cell--required::before
+    left 0;
+  .van-field
+    font-size 13px
+    padding: 0 0 0 8px;
   .goods-items-add
     .item
       display: flex
@@ -386,7 +343,7 @@ export default {
           padding: 0px
     .table
       margin-top: 5px
-      padding: 0 5px
+      padding: 0 15px
       background: #fff
       .header
         padding: 15px 0
@@ -394,16 +351,14 @@ export default {
         align-items: center
         justify-content: center
         div
-          flex: 5
-          text-align: center
+          flex: 1
       .list
         padding: 15px 0
         display: flex
         align-items: center
         justify-content: center
         div
-          flex: 5
-          text-align: center
+          flex: 1
     .footer
       height: 50px
       width: 100%

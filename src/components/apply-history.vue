@@ -1,8 +1,8 @@
 <template>
-  <!-- 办公用品领用 -->
+  <!-- 审批历史 -->
   <div>
     <van-nav-bar
-      title="领用信息"
+    title="审批历史"
       left-text="返回"
       right-text="首页"
       left-arrow
@@ -12,29 +12,28 @@
     <div class="goods-out">
       <div class="list" v-for="(item, index) in list " :key="index">
         <div class="left">
-            <div class="number">{{item.goodsCode}}</div>
-              <div class="item">产品名称：{{item.goodsName}}</div>
-              <div class="item">产品规格：{{item.goodsUnit | filterType}}</div>
-              <div class="item">产品数量：{{item.goodsNum}}</div>
-            </div>
-            <div class="right">
-              <div class="round" @click="hadleDetail"></div>
-            </div>
+            <div class="number">审批人：{{item.approvalUser}}</div>
+            <div class="item">审批岗位：{{item.postCode}}</div>
+            <div class="number">审批结果：{{item.approvalResult | filterType3 }}</div>
+            <div class="item">审批意见：{{item.comments}}</div>
+            <div class="item">审批时间：{{item.approvalTime}}</div>
+        </div>
+        <div class="right">
+          <!--<div class="round" @click="hadleDetail"></div>-->
+        </div>
       </div>
-      <goods-add></goods-add>
     </div>
   </div>
 </template>
 <script>
-import GoodsAdd from '@/base/goods-add.vue'
 export default {
   data() {
     return {
-      list: []
+      list: [],
+      applyId: this.$route.query.applyId
     }
   },
   components: {
-    GoodsAdd
   },
   filters: {
     filterType(val) {
@@ -49,16 +48,37 @@ export default {
       } else if (val === '5') {
         return '张'
       }
-    }
-  },
-  created(){
+    },
+    filterType3(val) {
+      if (val == '0') {
+        return '进行中'
+      } else if (val == '1') {
+        return '通过'
+      } else if (val == '2') {
+        return '拒绝'
+      } else if (val == '9') {
+        return '结束'
+      }
+    },
   },
   mounted() {
-    if (this.$route.query.doneDetaillist.length > 0) {
-      this.list = this.$route.query.doneDetaillist
-    }
+    this.getList()
   },
   methods: {
+    getList() {
+      let params = {
+        applyId: this.$route.query.applyId
+      }
+      this.$http('/api/appHistoryList', params).then( res => {
+        console.log(res)
+        if (res.rows.length > 0) {
+          this.list = res.rows
+        }else{
+            this.list = []
+        }
+      
+      })
+    },
     // 返回
     onClickLeft() {
       this.$router.back(-1)
